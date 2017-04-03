@@ -8,7 +8,7 @@
 template <unsigned int S>
 class VEBTree : AbstractVEBTree<S> {
    private:
-    const static int_value half = (1ULL << (S / 2)) - 1;
+    const static int_value half = (1ULL << ((S + 1) / 2)) - 1;
 
     std::array<VEBTree<S / 2>*, 1ULL << (S / 2)> children;
     VEBTree<S / 2>* aux;
@@ -16,7 +16,7 @@ class VEBTree : AbstractVEBTree<S> {
     int_value min, max;
 
     static int_value high(int_value x) {
-        return x & (~half);
+        return (x & (~half)) >> ((S + 1) / 2);
     }
 
     static int_value low(int_value x) {
@@ -31,7 +31,7 @@ class VEBTree : AbstractVEBTree<S> {
     VEBTree() {
         min = NO;
         max = NO;
-        if (children.size() > 2) {
+        if (S > 1) {
             aux = new VEBTree<S / 2>();
             for (auto& child : children) {
                 child = new VEBTree<S / 2>();  // TODO: maybe some lazy shit???
@@ -44,6 +44,7 @@ class VEBTree : AbstractVEBTree<S> {
     }
 
     void add(int_value x) {
+        std::cout << "   add start"<<x<<"\n";
         if (empty()) {
             min = x;
             max = x;
@@ -54,14 +55,18 @@ class VEBTree : AbstractVEBTree<S> {
                 max = x;
             }
         } else {
+            std::cout << "   add recursive, current S = " << S << '\n';
             if (x < min) std::swap(min, x);
             if (max < x) std::swap(max, x);
 
-            if (S != 1) {
+            if (S > 2) {
+                std::cout << "this is if " << half << ' ' << x << ' ' << high(x) << ' ' << low(x) << "\n";
                 if (children[high(x)]->empty()) aux->add(high(x));
                 children[high(x)]->add(low(x));
+                std::cout << "this is end if \n";
             }
         }
+        std::cout << "  add end\n";
     }
 
     void remove(int_value x) {
@@ -95,8 +100,7 @@ class VEBTree : AbstractVEBTree<S> {
         if (x < min) return min;
         if (aux->empty()) return max;
 
-        if (!children[high(x)]->empty() && children[high(x)]->getMax() > low(x))
-            return merge(high(x), children[high(x)]->next(low(x)));
+        if (!children[high(x)]->empty() && children[high(x)]->getMax() > low(x)) return merge(high(x), children[high(x)]->next(low(x)));
 
         int_value next_high = aux->next(high(x));
         if (next_high == NO) {
@@ -111,8 +115,7 @@ class VEBTree : AbstractVEBTree<S> {
         if (max < x) return max;
         if (aux->empty()) return min;
 
-        if (!children[high(x)]->empty() && children[high(x)]->getMin() < low(x))
-            return merge(high(x), children[high(x)]->prev(low(x)));
+        if (!children[high(x)]->empty() && children[high(x)]->getMin() < low(x)) return merge(high(x), children[high(x)]->prev(low(x)));
 
         int_value prev_high = aux->prev(high(x));
         if (prev_high == NO) {
@@ -147,6 +150,15 @@ int main() {
     tree.remove(10);
     std::cout << tree.next(5) << std::endl;
     std::cout << tree.prev(11) << std::endl;
+
+    std::cout << "start shirv test" << std::endl;
+
+    VEBTree<10> a;
+    for (int i = 0; i < 50; i += 10) {
+        std::cout << "add " << i << std::endl;
+        a.add(i);
+        std::cout << "prev " << a.prev(i) << std::endl;
+    }
 
     return 0;
 }
